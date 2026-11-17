@@ -22,7 +22,7 @@ function loadPendo(apiKey) {
   (function (p, e, n, d, o) {
     let v, w, x, y, z;
     o = p[d] = p[d] || {}; o._q = o._q || [];
-    v = ['initialize', 'identify', 'updateOptions', 'pageLoad', 'track'];
+    v = ['initialize', 'identify', 'updateOptions', 'pageLoad', 'track', 'trackAgent'];
     for (w = 0, x = v.length; w < x; ++w) (function (m) {
       o[m] = o[m] || function () { o._q[m === v[0] ? 'unshift' : 'push']([m].concat([].slice.call(arguments, 0))); };
     })(v[w]);
@@ -48,4 +48,18 @@ export function track(name, props = {}) {
     if (window.pendo && typeof window.pendo.track === 'function') window.pendo.track(name, props);
   } catch (e) { /* ignore */ }
   (window.__wanderlyEvents = window.__wanderlyEvents || []).push({ name, props, t: Date.now() });
+}
+
+// Conversational AI agent events ("prompt" | "agent_response" | "user_reaction").
+export function trackAgent(eventType, metadata) {
+  try {
+    if (window.pendo && typeof window.pendo.trackAgent === 'function') window.pendo.trackAgent(eventType, metadata);
+  } catch (e) { /* ignore */ }
+}
+
+export function newId(prefix) {
+  try {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+  } catch (e) { /* ignore */ }
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }

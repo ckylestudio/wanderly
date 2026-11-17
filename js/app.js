@@ -68,7 +68,7 @@ function viewHome() {
   $('#ai-prompt-form').addEventListener('submit', (e) => {
     e.preventDefault(); const v = $('#ai-prompt-input').value.trim();
     track('ai_prompt_submitted', { fromHome: true });
-    assistant.send(v || 'Surprise me with a trip');
+    assistant.send(v || 'Surprise me with a trip', { suggested: !v });
   });
   $$('.dest-card').forEach(b => b.addEventListener('click', () => { $('#to').value = b.dataset.city; track('destination_card_clicked', { city: b.dataset.city }); $('#depart').focus(); }));
   $('#search-form').addEventListener('submit', (e) => {
@@ -355,7 +355,7 @@ function viewConfirmation({ path }) {
   app.innerHTML = shell(`${steps(3)}<div class="confirm"><div class="ok">🎉</div><h1>You're going to ${esc(b.city)}!</h1><p>Booking reference <span class="ref">${esc(b.ref)}</span></p>
     <div class="panel" style="text-align:left;margin:18px 0"><div class="summary-row"><span>${esc(b.hotel)}</span><span>${b.pax} traveler(s)</span></div><div class="summary-row"><span>${esc(b.depart)} → ${esc(b.ret)}</span><span>${fmt(b.total)}</span></div></div>
     <button class="btn accent" id="plan-ai">✨ Plan my activities with AI</button> <a class="btn ghost" id="view-trips" href="#/trips">View my trips</a></div>`);
-  $('#plan-ai').addEventListener('click', () => { track('post_booking_ai_clicked'); assistant.send(`What should I do in ${b.city}?`); });
+  $('#plan-ai').addEventListener('click', () => { track('post_booking_ai_clicked'); assistant.send(`What should I do in ${b.city}?`, { suggested: true }); });
 }
 
 function viewTrips() {
@@ -367,7 +367,7 @@ function viewAssistantPage() {
   document.title = 'AI concierge – Wanderly';
   app.innerHTML = shell(`<div class="confirm"><div class="ok">✨</div><h1>Meet your AI concierge</h1><p>Describe your perfect trip in plain English. Wanderly AI finds options, compares prices and books it for you.</p>
     <div class="chips" style="justify-content:center"><button class="chip" data-q="Cheap beach trip">🏖️ Cheap beach trip</button><button class="chip" data-q="Romantic week in Europe">💑 Romantic Europe</button><button class="chip" data-q="Weekend in New York">🗽 Weekend in NYC</button></div></div>`);
-  $$('.chip', app).forEach(c => c.addEventListener('click', () => assistant.send(c.dataset.q)));
+  $$('.chip', app).forEach(c => c.addEventListener('click', () => assistant.send(c.dataset.q, { suggested: true })));
   assistant.open('page');
 }
 
