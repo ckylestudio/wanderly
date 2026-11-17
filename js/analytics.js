@@ -22,7 +22,7 @@ function loadPendo(apiKey) {
   (function (p, e, n, d, o) {
     let v, w, x, y, z;
     o = p[d] = p[d] || {}; o._q = o._q || [];
-    v = ['initialize', 'identify', 'updateOptions', 'pageLoad', 'track'];
+    v = ['initialize', 'identify', 'updateOptions', 'pageLoad', 'track', 'trackAgent'];
     for (w = 0, x = v.length; w < x; ++w) (function (m) {
       o[m] = o[m] || function () { o._q[m === v[0] ? 'unshift' : 'push']([m].concat([].slice.call(arguments, 0))); };
     })(v[w]);
@@ -35,7 +35,7 @@ export function initAnalytics() {
   const id = getIdentity();
   window.wanderlyIdentity = id;
   if (cfg.pendoApiKey) {
-    loadPendo(cfg.pendoApiKey);
+    loadPendo('47028a32-00c2-4d92-bc8c-2167c8f5c6d4');
     window.pendo.initialize({ visitor: id.visitor, account: id.account });
   } else if (window.pendo && window.pendo.initialize && !window.pendo.__wanderlyInit) {
     // Snippet pasted into index.html without initialize() – do it here with our identity.

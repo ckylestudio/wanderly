@@ -4,7 +4,7 @@
 // - fixes: product-quality toggles. All OFF = the "as shipped" experience with lots of friction.
 //   Flip these to true (e.g. after Novus recommends them) and watch the funnel improve.
 window.WANDERLY_CONFIG = {
-  pendoApiKey: "",
+  pendoApiKey: "47028a32-00c2-4d92-bc8c-2167c8f5c6d4",
   fixes: {
     keepFiltersOnSort: false,   // sorting no longer resets price/stops filters
     showFeesEarly: false,       // show taxes + concierge fee on the trip page, not first at payment
