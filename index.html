@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wanderly – AI travel concierge</title>
+  <meta name="description" content="Wanderly is an AI-native travel service. Tell us where you want to go and we'll book it.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="config.js"></script>
+  <!--
+    ===== NOVUS / PENDO INSTALL POINT =====
+    Paste the Novus (or Pendo) install snippet here, or set pendoApiKey in config.js
+    and js/analytics.js will load the Pendo agent for you.
+    Visitor/account identity for synthetic users is exposed as window.WANDERLY_IDENTITY
+    (see js/analytics.js).
+    =======================================
+  -->
+</head>
+<body>
+  <header class="site-header" id="site-header">
+    <a class="brand" href="#/" id="brand-link">✈️ <span>Wanderly</span></a>
+    <nav class="nav" id="main-nav">
+      <a href="#/" id="nav-explore">Explore</a>
+      <a href="#/trips" id="nav-trips">My trips</a>
+      <a href="#/assistant" id="nav-assistant">AI concierge</a>
+      <a href="#/signin" id="nav-signin" class="nav-signin">Sign in</a>
+    </nav>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+
+  <footer class="site-footer">
+    <span>© 2026 Wanderly Labs · Synthetic demo app – no real bookings or payments are made.</span>
+  </footer>
+
+  <button id="chat-launcher" class="chat-launcher" aria-label="Open AI concierge">💬 Ask Wanderly AI</button>
+  <section id="chat-panel" class="chat-panel" hidden aria-label="AI concierge chat"></section>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

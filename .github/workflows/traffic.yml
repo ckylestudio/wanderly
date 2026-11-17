@@ -1,0 +1,44 @@
+name: Synthetic traffic
+
+on:
+  schedule:
+    - cron: '7,37 * * * *'   # every 30 minutes
+  workflow_dispatch:
+    inputs:
+      sessions:
+        description: 'Baseline sessions per run (scaled by time of day)'
+        default: '24'
+      site_url:
+        description: 'Override site URL'
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: traffic
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: traffic/package-lock.json
+      - name: Install
+        working-directory: traffic
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Generate traffic
+        working-directory: traffic
+        env:
+          SITE_URL: ${{ inputs.site_url || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
+          SESSIONS: ${{ inputs.sessions || '24' }}
+          CONCURRENCY: '3'
+        run: node generate.mjs

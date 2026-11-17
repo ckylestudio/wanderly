@@ -1,0 +1,14 @@
+{
+  "name": "wanderly-traffic",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Persona-driven synthetic traffic for the Wanderly demo app",
+  "scripts": {
+    "run": "node generate.mjs",
+    "once": "SESSIONS=3 node generate.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.49.1"
+  }
+}
