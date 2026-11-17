@@ -1,0 +1,55 @@
+name: Backfill historical traffic
+
+# Replays past days by faking the browser clock, so events carry past timestamps.
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'How many past days to backfill (ending yesterday)'
+        default: '14'
+      sessions_per_day:
+        description: 'Sessions per weekday (weekends ~75%)'
+        default: '120'
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      dates: ${{ steps.d.outputs.dates }}
+    steps:
+      - id: d
+        run: |
+          dates=$(python3 -c "import datetime as d,json; t=d.date.today(); print(json.dumps([str(t-d.timedelta(days=i)) for i in range(int('${{ inputs.days }}'),0,-1)]))")
+          echo "dates=$dates" >> "$GITHUB_OUTPUT"
+
+  backfill:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 7
+      matrix:
+        date: ${{ fromJson(needs.plan.outputs.dates) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: traffic/package-lock.json
+      - working-directory: traffic
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - working-directory: traffic
+        env:
+          SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          SESSIONS: ${{ inputs.sessions_per_day }}
+          BACKFILL_DATE: ${{ matrix.date }}
+          CONCURRENCY: '4'
+          SPEED: '0.5'
+        run: node generate.mjs

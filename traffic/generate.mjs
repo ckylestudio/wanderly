@@ -11,6 +11,7 @@ const BASE_SESSIONS = Number(process.env.SESSIONS || 24);
 const CONCURRENCY = Number(process.env.CONCURRENCY || 3);
 const SPEED = Number(process.env.SPEED || 1); // <1 = faster think-times (for local tests)
 const VERBOSE = !!process.env.VERBOSE;
+const BACKFILL_DATE = process.env.BACKFILL_DATE || ''; // YYYY-MM-DD: replay a past day by faking the browser clock
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const ri = (a, b) => Math.floor(rnd(a, b + 1));
@@ -306,6 +307,10 @@ async function runSession(browser, idx) {
     account: { id: v.acct.id, name: v.acct.name, tier: v.acct.tier, industry: v.acct.industry } };
   await ctxB.addInitScript((id) => { window.WANDERLY_IDENTITY = id; Object.defineProperty(navigator, 'webdriver', { get: () => false }); }, identity);
   const page = await ctxB.newPage();
+  if (BACKFILL_DATE) {
+    const hour = wpick(Array.from({ length: 24 }, (_, h) => ({ h, w: hourWeight(h) }))).h;
+    await page.clock.install({ time: new Date(`${BACKFILL_DATE}T00:00:00Z`).getTime() + hour * 3600e3 + rnd(0, 3600e3) });
+  }
   page.setDefaultTimeout(10000);
   const out = { persona: persona.name, visitor: v.id, device: mobile ? 'mobile' : 'desktop', stage: 'home', outcome: 'abandoned', reason: '' };
   const ctx = { persona, v };
@@ -335,7 +340,10 @@ function hourWeight(h) { // UTC hour -> relative traffic (US-heavy daytime curve
 }
 
 async function main() {
-  const n = Math.max(1, Math.round(BASE_SESSIONS * hourWeight(new Date().getUTCHours()) * rnd(0.8, 1.25)));
+  const n = BACKFILL_DATE
+    ? Math.max(1, Math.round(BASE_SESSIONS * ([0, 6].includes(new Date(BACKFILL_DATE + 'T12:00:00Z').getUTCDay()) ? 0.75 : 1) * rnd(0.85, 1.15)))
+    : Math.max(1, Math.round(BASE_SESSIONS * hourWeight(new Date().getUTCHours()) * rnd(0.8, 1.25)));
+  if (BACKFILL_DATE) console.log(`Backfilling ${BACKFILL_DATE}`);
   console.log(`Wanderly traffic: ${n} sessions -> ${SITE_URL} (concurrency ${CONCURRENCY})`);
   const browser = await chromium.launch({ headless: true });
   const results = []; let next = 0;
@@ -344,7 +352,7 @@ async function main() {
   await browser.close();
   const by = (k) => results.reduce((m, r) => { const key = r[k] + (k === 'reason' && !r.reason ? '' : ''); m[key] = (m[key] || 0) + 1; return m; }, {});
   const booked = results.filter(r => r.outcome === 'booked').length;
-  const lines = [`### Synthetic traffic run`, `- Sessions: **${n}** · Booked: **${booked}** (${Math.round(booked / n * 100)}%) · Errors: ${results.filter(r => r.outcome === 'error').length}`,
+  const lines = [`### Synthetic traffic run${BACKFILL_DATE ? ' (backfill ' + BACKFILL_DATE + ')' : ''}`, `- Sessions: **${n}** · Booked: **${booked}** (${Math.round(booked / n * 100)}%) · Errors: ${results.filter(r => r.outcome === 'error').length}`,
     `- Personas: ${JSON.stringify(by('persona'))}`, `- Last stage reached: ${JSON.stringify(by('stage'))}`, `- Drop-off reasons: ${JSON.stringify(by('reason'))}`];
   console.log(lines.join('\n'));
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
