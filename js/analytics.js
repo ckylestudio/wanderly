@@ -49,3 +49,17 @@ export function track(name, props = {}) {
   } catch (e) { /* ignore */ }
   (window.__wanderlyEvents = window.__wanderlyEvents || []).push({ name, props, t: Date.now() });
 }
+
+// Conversational AI agent events ("prompt" | "agent_response" | "user_reaction").
+export function trackAgent(eventType, metadata) {
+  try {
+    if (window.pendo && typeof window.pendo.trackAgent === 'function') window.pendo.trackAgent(eventType, metadata);
+  } catch (e) { /* ignore */ }
+}
+
+export function newId(prefix) {
+  try {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+  } catch (e) { /* ignore */ }
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}

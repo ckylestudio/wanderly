@@ -1,7 +1,9 @@
 // "Wanderly AI" – a fake AI concierge. Deliberately imperfect: slow, sometimes errors,
 // sometimes irrelevant, and its "Book this" button silently fails ~30% of the time.
 import { DESTINATIONS, findDest, futureDate, fmt } from './data.js';
-import { track } from './analytics.js';
+import { track, trackAgent, newId } from './analytics.js';
+
+const AGENT_ID = 'aN7ZtVT2EN0ZlK4IRyOpHaFkVSI';
 
 const cfg = () => (window.WANDERLY_CONFIG || {}).fixes || {};
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -42,6 +44,7 @@ export function initAssistant({ navigate, getOrigin }) {
   const panel = document.getElementById('chat-panel');
   let built = false;
   let busy = false;
+  const conversationId = newId('conversation');
 
   function build() {
     panel.innerHTML = `
@@ -55,7 +58,7 @@ export function initAssistant({ navigate, getOrigin }) {
       <form class="chat-form" id="chat-form"><input id="chat-input" placeholder="Where do you want to go?" autocomplete="off"><button class="btn" id="chat-send" type="submit">Send</button></form>`;
     panel.querySelector('#chat-close').addEventListener('click', close);
     panel.querySelector('#chat-form').addEventListener('submit', (e) => { e.preventDefault(); const i = panel.querySelector('#chat-input'); const v = i.value.trim(); if (v) { i.value = ''; send(v); } });
-    panel.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => send(c.dataset.q)));
+    panel.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => send(c.dataset.q, { suggested: true })));
     add('bot', "Hi, I'm Wanderly AI ✨ Tell me about the trip you're dreaming of and I'll find and book it.");
     built = true;
   }
@@ -77,11 +80,12 @@ export function initAssistant({ navigate, getOrigin }) {
   }
   function close() { panel.hidden = true; }
 
-  async function send(text) {
+  async function send(text, { suggested = false } = {}) {
     if (busy) return;
     busy = true;
     add('user', text);
     track('assistant_message_sent', { length: text.length });
+    trackAgent('prompt', { agentId: AGENT_ID, conversationId, messageId: newId('prompt'), content: text, suggestedPrompt: suggested, fileUploaded: false });
     const typing = document.createElement('div');
     typing.className = 'typing'; typing.textContent = 'Wanderly AI is thinking…';
     const log = panel.querySelector('#chat-log'); log.appendChild(typing); log.scrollTop = log.scrollHeight;
@@ -92,7 +96,9 @@ export function initAssistant({ navigate, getOrigin }) {
     busy = false;
     if (Math.random() < (fast ? 0.03 : 0.14)) {
       track('assistant_response_error', { latencyMs: Date.now() - started });
-      add('bot err', 'Sorry, something went wrong on my end. Please try again.');
+      const errText = 'Sorry, something went wrong on my end. Please try again.';
+      add('bot err', errText);
+      trackAgent('agent_response', { agentId: AGENT_ID, conversationId, messageId: newId('agent_response'), content: errText });
       return;
     }
     const r = reply(text);
@@ -103,6 +109,8 @@ export function initAssistant({ navigate, getOrigin }) {
     const fb = `<div class="fb"><button class="fb-up" aria-label="Helpful">👍</button><button class="fb-down" aria-label="Not helpful">👎</button></div>`;
     const el = add('bot', r.text, cardsHtml + fb);
     track('assistant_response', { latencyMs: Date.now() - started, cards: r.cards.length, relevant: !r.irrelevant });
+    const responseId = newId('agent_response');
+    trackAgent('agent_response', { agentId: AGENT_ID, conversationId, messageId: responseId, content: r.text });
     el.querySelectorAll('.book-this').forEach(b => b.addEventListener('click', () => {
       const d = DESTINATIONS.find(x => x.code === b.dataset.dest);
       // Known bug: the handler silently does nothing ~30% of the time.
@@ -112,10 +120,10 @@ export function initAssistant({ navigate, getOrigin }) {
       const q = new URLSearchParams({ from: getOrigin(), to: d.city, depart: futureDate(30), ret: futureDate(35), pax: 2, via: 'ai' });
       navigate('#/results?' + q.toString());
     }));
-    el.querySelector('.fb-up').addEventListener('click', () => { track('assistant_feedback', { helpful: true }); el.querySelector('.fb').textContent = 'Thanks for the feedback!'; });
-    el.querySelector('.fb-down').addEventListener('click', () => { track('assistant_feedback', { helpful: false }); el.querySelector('.fb').textContent = 'Thanks – we\'ll improve.'; });
+    el.querySelector('.fb-up').addEventListener('click', () => { track('assistant_feedback', { helpful: true }); trackAgent('user_reaction', { agentId: AGENT_ID, conversationId, messageId: responseId, content: 'positive' }); el.querySelector('.fb').textContent = 'Thanks for the feedback!'; });
+    el.querySelector('.fb-down').addEventListener('click', () => { track('assistant_feedback', { helpful: false }); trackAgent('user_reaction', { agentId: AGENT_ID, conversationId, messageId: responseId, content: 'negative' }); el.querySelector('.fb').textContent = 'Thanks – we\'ll improve.'; });
   }
 
   launcher.addEventListener('click', () => (panel.hidden ? open('launcher') : close()));
-  return { open, close, send: (t) => { open('prompt'); return send(t); } };
+  return { open, close, send: (t, opts) => { open('prompt'); return send(t, opts); } };
 }
