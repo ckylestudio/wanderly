@@ -218,7 +218,8 @@ function viewSignin({ q }) {
         <div style="margin-bottom:12px"><label for="password">Password</label><input id="password" name="password" type="password">
           ${mode === 'signup' && fixes().inlineValidation ? '<div class="hint">At least 10 characters, with a number and a symbol.</div>' : ''}</div>
         <button class="btn" id="auth-submit" type="submit" style="width:100%">${mode === 'signup' ? 'Create account' : 'Sign in'}</button></form>
-      ${fixes().guestCheckout ? '' : ''}</div>`);
+      ${q.next ? '<button class="btn ghost" id="continue-guest" type="button" style="width:100%;margin-top:12px">Continue as guest</button>' : ''}</div>`);
+    $('#continue-guest')?.addEventListener('click', () => { track('guest_checkout_chosen'); navigate('#' + next); });
     $('#tab-signin').addEventListener('click', () => { mode = 'signin'; draw(); });
     $('#tab-signup').addEventListener('click', () => { mode = 'signup'; draw(); });
     $('#auth-form').addEventListener('submit', (e) => {
