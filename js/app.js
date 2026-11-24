@@ -216,12 +216,11 @@ function viewSignin({ q }) {
         ${mode === 'signup' ? '<div style="margin-bottom:12px"><label for="name">First name</label><input id="name" name="name"></div>' : ''}
         <div style="margin-bottom:12px"><label for="email">Email</label><input id="email" name="email" type="email"></div>
         <div style="margin-bottom:12px"><label for="password">Password</label><input id="password" name="password" type="password">
-          ${mode === 'signup' && fixes().inlineValidation ? '<div class="hint">At least 10 characters, with a number and a symbol.</div>' : ''}</div>
+          ${mode === 'signup' ? '<div class="hint">At least 10 characters, with a number and a symbol.</div>' : ''}</div>
         <button class="btn" id="auth-submit" type="submit" style="width:100%">${mode === 'signup' ? 'Create account' : 'Sign in'}</button></form>
-      ${fixes().guestCheckout ? '' : ''}
-      ${q.next ? '<div style="margin-top:16px;text-align:center"><div class="hint" style="margin-bottom:8px">Created your account on another device or browser? You can book without signing in.</div><button class="btn ghost" id="continue-guest" type="button" style="width:100%">Continue as guest</button></div>' : ''}</div>`);
+      ${q.next ? '<div class="hint" style="margin-top:12px;text-align:center">Created your account on another device or browser? You can book without signing in.</div><button class="btn ghost" id="continue-guest" type="button" style="width:100%;margin-top:12px">Continue as guest</button>' : ''}</div>`);
+    $('#continue-guest')?.addEventListener('click', () => { track('guest_checkout_chosen'); navigate('#' + next); });
     $('#tab-signin').addEventListener('click', () => { mode = 'signin'; draw(); });
-    $('#continue-guest')?.addEventListener('click', () => { track('guest_checkout_selected', { afterError: !!err }); navigate('#' + next); });
     $('#tab-signup').addEventListener('click', () => { mode = 'signup'; draw(); });
     $('#auth-form').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -229,7 +228,7 @@ function viewSignin({ q }) {
       const emailOk = /^\S+@\S+\.\S+$/.test(v.email || '');
       if (mode === 'signup') {
         const pwOk = (v.password || '').length >= 10 && /\d/.test(v.password) && /[^A-Za-z0-9]/.test(v.password);
-        if (!emailOk || !pwOk) { track('validation_error', { form: 'signup', fields: (!emailOk ? 'email,' : '') + (!pwOk ? 'password' : '') }); return draw(fixes().inlineValidation ? (!emailOk ? 'Enter a valid email address.' : 'Password needs 10+ characters, a number and a symbol.') : 'Invalid input.'); }
+        if (!emailOk || !pwOk) { track('validation_error', { form: 'signup', fields: (!emailOk ? 'email,' : '') + (!pwOk ? 'password' : '') }); return draw(!emailOk ? 'Enter a valid email address.' : 'Password needs 10+ characters, a number and a symbol.'); }
         state.users[v.email] = { password: v.password, name: v.name || v.email.split('@')[0] }; save('users', state.users);
         state.user = { email: v.email, name: state.users[v.email].name }; save('user', state.user);
         track('signup_completed'); updateNav('/'); navigate('#' + next);
