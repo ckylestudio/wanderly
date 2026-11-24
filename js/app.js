@@ -208,32 +208,33 @@ function viewSignin({ q }) {
   let mode = q.mode || 'signin';
   const next = q.next ? decodeURIComponent(q.next) : '/';
   track('signin_viewed', { gated: !!q.next });
-  const draw = (err = '') => {
+  const draw = (err = '', email = '', offerSignup = false) => {
     app.innerHTML = shell(`<div class="auth-box panel">
       ${q.next ? '<div class="banner info">Sign in to continue to checkout.</div>' : ''}
       <div class="tabs"><button class="btn ${mode === 'signin' ? '' : 'ghost'}" id="tab-signin" type="button">Sign in</button><button class="btn ${mode === 'signup' ? '' : 'ghost'}" id="tab-signup" type="button">Create account</button></div>
-      <form id="auth-form" novalidate>${err ? `<div class="banner error" role="alert">${esc(err)}</div>` : ''}
+      <form id="auth-form" novalidate>${err ? `<div class="banner error" role="alert">${esc(err)}${offerSignup ? ' <button class="link-like" id="error-signup" type="button">Create account</button>' : ''}</div>` : ''}
         ${mode === 'signup' ? '<div style="margin-bottom:12px"><label for="name">First name</label><input id="name" name="name"></div>' : ''}
-        <div style="margin-bottom:12px"><label for="email">Email</label><input id="email" name="email" type="email"></div>
+        <div style="margin-bottom:12px"><label for="email">Email</label><input id="email" name="email" type="email" value="${esc(email)}"></div>
         <div style="margin-bottom:12px"><label for="password">Password</label><input id="password" name="password" type="password">
           ${mode === 'signup' && fixes().inlineValidation ? '<div class="hint">At least 10 characters, with a number and a symbol.</div>' : ''}</div>
         <button class="btn" id="auth-submit" type="submit" style="width:100%">${mode === 'signup' ? 'Create account' : 'Sign in'}</button></form>
       ${fixes().guestCheckout ? '' : ''}</div>`);
     $('#tab-signin').addEventListener('click', () => { mode = 'signin'; draw(); });
     $('#tab-signup').addEventListener('click', () => { mode = 'signup'; draw(); });
+    $('#error-signup')?.addEventListener('click', () => { mode = 'signup'; draw('', email); });
     $('#auth-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const v = Object.fromEntries(new FormData(e.target).entries());
       const emailOk = /^\S+@\S+\.\S+$/.test(v.email || '');
       if (mode === 'signup') {
         const pwOk = (v.password || '').length >= 10 && /\d/.test(v.password) && /[^A-Za-z0-9]/.test(v.password);
-        if (!emailOk || !pwOk) { track('validation_error', { form: 'signup', fields: (!emailOk ? 'email,' : '') + (!pwOk ? 'password' : '') }); return draw(fixes().inlineValidation ? (!emailOk ? 'Enter a valid email address.' : 'Password needs 10+ characters, a number and a symbol.') : 'Invalid input.'); }
+        if (!emailOk || !pwOk) { track('validation_error', { form: 'signup', fields: (!emailOk ? 'email,' : '') + (!pwOk ? 'password' : '') }); return draw(fixes().inlineValidation ? (!emailOk ? 'Enter a valid email address.' : 'Password needs 10+ characters, a number and a symbol.') : 'Invalid input.', v.email); }
         state.users[v.email] = { password: v.password, name: v.name || v.email.split('@')[0] }; save('users', state.users);
         state.user = { email: v.email, name: state.users[v.email].name }; save('user', state.user);
         track('signup_completed'); updateNav('/'); navigate('#' + next);
       } else {
         const u = state.users[v.email];
-        if (!emailOk || !u || u.password !== v.password) { track('signin_failed'); return draw(fixes().inlineValidation ? 'We couldn\'t find an account with those details.' : 'Something went wrong. Please try again.'); }
+        if (!emailOk || !u || u.password !== v.password) { track('signin_failed'); return draw('That email and password don\'t match an account. Check them and try again, or create an account.', v.email, true); }
         state.user = { email: v.email, name: u.name }; save('user', state.user);
         track('signin_completed'); updateNav('/'); navigate('#' + next);
       }
